@@ -1,5 +1,6 @@
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { InteractionState, EmotionState } from '../types';
+import { SoundWave } from './SoundWave';
 import { cn } from '../lib/utils';
 
 interface AvatarProps {
@@ -7,136 +8,221 @@ interface AvatarProps {
   emotion: EmotionState;
 }
 
-export function Avatar({ state }: AvatarProps) {
+export function Avatar({ state, emotion }: AvatarProps) {
+  const isIdle = state === 'idle';
+  const isListening = state === 'listening';
+  const isAnalyzing = state === 'analyzing';
+  const isComfort = state === 'comfort' || (state === 'feedback' && (emotion === 'anxious' || emotion === 'tired'));
+  const isFeedback = state === 'feedback';
+
   // Float animation for the whole avatar
   const floatAnim = {
-    y: [-8, 8, -8],
+    y: isListening ? [-5, 5, -5] : [-12, 12, -12],
     transition: {
-      duration: 5,
+      duration: isListening ? 2 : (isComfort ? 5 : 4),
       repeat: Infinity,
       ease: 'easeInOut',
     },
   };
 
+  // Ear/Side bumps animation for listening
+  const earAnim = isListening ? {
+    scale: [1, 1.05, 1],
+    x: [-2, 2, -2],
+    transition: { duration: 1, repeat: Infinity, ease: 'easeInOut' }
+  } : { scale: 1, x: 0 };
+
+  const rightEarAnim = isListening ? {
+    scale: [1, 1.05, 1],
+    x: [2, -2, 2],
+    transition: { duration: 1.2, repeat: Infinity, ease: 'easeInOut' }
+  } : { scale: 1, x: 0 };
+
+  // Core glow colors based on state
+  let coreColor = 'from-orange-100 to-amber-50';
+  let coreGlow = 'rgba(255, 200, 150, 0.6)';
+  if (isListening) {
+    coreColor = 'from-blue-100 to-cyan-50';
+    coreGlow = 'rgba(100, 200, 255, 0.8)';
+  } else if (isAnalyzing) {
+    coreColor = 'from-indigo-100 to-purple-50';
+    coreGlow = 'rgba(150, 150, 255, 0.8)';
+  } else if (isComfort) {
+    coreColor = 'from-rose-100 to-orange-50';
+    coreGlow = 'rgba(255, 180, 150, 0.6)';
+  } else if (isFeedback) {
+    coreColor = 'from-teal-100 to-emerald-50';
+    coreGlow = 'rgba(100, 255, 200, 0.6)';
+  }
+
   return (
-    <div className="relative w-[500px] h-[400px] flex items-center justify-center mt-8">
+    <div className="relative w-[450px] h-[350px] flex items-center justify-center">
       
-      {/* Background Ripples / Light Floor */}
-      <motion.div 
-        animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.4, 0.3] }}
-        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute bottom-4 w-[400px] h-[60px] rounded-[100%] bg-gradient-to-b from-white/40 to-white/0 blur-md pointer-events-none" 
-      />
-      <motion.div 
-        animate={{ scale: [1, 1.05, 1], opacity: [0.6, 0.8, 0.6] }}
-        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute bottom-8 w-[280px] h-[30px] rounded-[100%] border-[2px] border-white/60 blur-[1px] pointer-events-none shadow-[0_0_20px_rgba(255,255,255,0.8)]" 
-      />
-      <motion.div 
-        animate={{ scale: [1, 1.02, 1], opacity: [0.8, 1, 0.8] }}
-        transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute bottom-[40px] w-[180px] h-[20px] rounded-[100%] border-[1.5px] border-white pointer-events-none shadow-[0_0_15px_rgba(255,255,255,1)]" 
-      />
+      {/* Surrounding Ambient Orbs & Rings (Analyzing / Listening) */}
+      <AnimatePresence>
+        {(isListening || isAnalyzing) && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          >
+            {/* Outer large ring */}
+            <motion.div 
+              animate={{ rotate: 360, scale: isAnalyzing ? [1, 1.05, 1] : 1 }}
+              transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
+              className="absolute w-[380px] h-[380px] rounded-full border-[1px] border-dashed border-blue-300/30"
+            />
+            
+            {/* Inner orbit ring with particles for analyzing */}
+            {isAnalyzing && (
+              <motion.div 
+                animate={{ rotate: -360 }}
+                transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+                className="absolute w-[280px] h-[280px] rounded-full border border-indigo-300/20"
+              >
+                <div className="absolute top-0 left-1/2 w-3 h-3 bg-indigo-300 rounded-full shadow-[0_0_10px_rgba(165,180,252,0.8)] -translate-x-1/2 -translate-y-1/2" />
+                <div className="absolute bottom-0 left-1/2 w-2 h-2 bg-purple-300 rounded-full shadow-[0_0_10px_rgba(216,180,254,0.8)] -translate-x-1/2 translate-y-1/2" />
+              </motion.div>
+            )}
+
+            {/* Listening ripples */}
+            {isListening && (
+              <motion.div 
+                animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0, 0.3] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeOut' }}
+                className="absolute w-[300px] h-[300px] rounded-full border-2 border-blue-300/40"
+              />
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main Avatar Entity */}
       <motion.div
         animate={floatAnim}
-        className="relative z-10 w-[360px] h-[260px]"
+        className="relative z-10 w-[300px] h-[220px]"
+        style={{ filter: 'drop-shadow(0 25px 45px rgba(100,150,255,0.15))' }}
       >
-        {/* Main Cloud Body Base */}
-        <div className="absolute inset-0 z-10">
-          {/* Center mass */}
-          <div className="absolute top-[20%] left-[15%] right-[15%] bottom-[10%] rounded-[100px] bg-gradient-to-br from-white/95 via-[#e8f0fe]/90 to-[#d2e3fc]/80 backdrop-blur-xl shadow-[inset_0_10px_30px_rgba(255,255,255,1),0_20px_40px_rgba(150,180,250,0.15)] border border-white/60" />
+        {/* Cloud Body Components (Overlapping to form a single shape) */}
+        <div className="absolute inset-0">
           
-          {/* Top Bump */}
-          <div className="absolute -top-[5%] left-[25%] right-[25%] h-[160px] rounded-full bg-gradient-to-b from-white to-[#e8f0fe]/90 shadow-[inset_0_15px_20px_rgba(255,255,255,1)]" />
+          {/* Top Center Bump */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[150px] h-[150px] rounded-full bg-gradient-to-b from-white/95 to-white/70 shadow-[inset_0_4px_10px_rgba(255,255,255,1)]" />
           
           {/* Left Bump */}
-          <div className="absolute top-[25%] -left-[5%] w-[160px] h-[160px] rounded-full bg-gradient-to-tr from-white/90 to-[#e8f0fe]/80 shadow-[inset_15px_15px_20px_rgba(255,255,255,0.9)]" />
+          <motion.div 
+            animate={earAnim}
+            className="absolute top-10 left-4 w-[110px] h-[110px] rounded-full bg-gradient-to-bl from-white/90 to-blue-50/80 shadow-[inset_4px_4px_10px_rgba(255,255,255,0.8)]" 
+          />
           
           {/* Right Bump */}
-          <div className="absolute top-[25%] -right-[5%] w-[160px] h-[160px] rounded-full bg-gradient-to-tl from-white/90 to-[#e8f0fe]/80 shadow-[inset_-15px_15px_20px_rgba(255,255,255,0.9)]" />
-        </div>
+          <motion.div 
+            animate={rightEarAnim}
+            className="absolute top-10 right-4 w-[110px] h-[110px] rounded-full bg-gradient-to-br from-white/90 to-blue-50/80 shadow-[inset_-4px_4px_10px_rgba(255,255,255,0.8)]" 
+          />
+          
+          {/* Bottom Base */}
+          <div className="absolute bottom-4 left-4 right-4 h-[120px] rounded-[60px] bg-gradient-to-b from-white/60 to-blue-100/40 shadow-[inset_0_-10px_20px_rgba(255,255,255,0.6)] backdrop-blur-sm" />
 
-        {/* Shading and Glassy Overlays */}
-        <div className="absolute inset-0 z-20 pointer-events-none mix-blend-overlay">
-          <div className="absolute inset-0 rounded-[100px] shadow-[inset_0_-20px_40px_rgba(100,150,255,0.4)]" />
-          {/* Glossy highlights */}
-          <div className="absolute top-[5%] left-[30%] w-[40%] h-[30%] bg-gradient-to-b from-white to-transparent rounded-[100%] opacity-80 blur-[2px]" />
-          <div className="absolute top-[30%] left-[5%] w-[20%] h-[30%] bg-gradient-to-r from-white to-transparent rounded-[100%] opacity-70 blur-[2px]" />
-          <div className="absolute top-[30%] right-[5%] w-[20%] h-[30%] bg-gradient-to-l from-white to-transparent rounded-[100%] opacity-70 blur-[2px]" />
+          {/* Sparkles / Highlights on the body */}
+          <div className="absolute top-6 left-[25%] w-2 h-2 bg-white rounded-full blur-[1px] opacity-80" />
+          <div className="absolute top-10 right-[25%] w-3 h-3 bg-white rounded-full blur-[2px] opacity-70" />
         </div>
-
-        {/* Particles/Stars on the cloud */}
-        <div className="absolute top-[20%] left-[20%] w-3 h-3 bg-white rounded-full blur-[1px] shadow-[0_0_10px_white] z-30" />
-        <div className="absolute top-[40%] right-[15%] w-4 h-4 bg-white rounded-full blur-[1.5px] shadow-[0_0_15px_white] z-30 opacity-80" />
-        <div className="absolute top-[60%] left-[10%] w-2 h-2 bg-white rounded-full blur-[0.5px] shadow-[0_0_8px_white] z-30 opacity-60" />
-        
-        {/* Floating dust around the cloud */}
-        <motion.div animate={{y:[-10,10,-10], opacity:[0.5,1,0.5]}} transition={{duration:3, repeat:Infinity}} className="absolute -top-[10%] left-[10%] text-white text-xl z-30 blur-[1px]">✨</motion.div>
-        <motion.div animate={{y:[10,-10,10], opacity:[0.3,0.8,0.3]}} transition={{duration:4, repeat:Infinity}} className="absolute top-[10%] -right-[10%] text-white text-lg z-30 blur-[0.5px]">✨</motion.div>
 
         {/* Face Elements */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center pt-8 z-30">
+        <div className="absolute inset-0 flex flex-col items-center justify-center pt-2 z-20">
+          
           {/* Eyes */}
-          <div className="flex gap-[60px] items-center justify-center">
+          <div className="flex gap-14 items-center justify-center">
             {/* Left Eye */}
-            <div className="w-[28px] h-[32px] bg-[#1a2b4c] rounded-[14px] shadow-sm relative overflow-hidden">
-              <div className="absolute top-1.5 right-1.5 w-3 h-3 bg-white rounded-full opacity-90" />
-              <div className="absolute bottom-2 left-1.5 w-1.5 h-1.5 bg-blue-200/80 rounded-full" />
-            </div>
+            <motion.div 
+              animate={{ 
+                height: isComfort ? 6 : (isAnalyzing ? 22 : 24),
+                scaleY: isComfort ? 0.6 : 1,
+                y: isComfort ? 5 : 0
+              }}
+              className="w-6 bg-[#1a2b4c] rounded-full shadow-sm relative overflow-hidden"
+              style={{ minHeight: '6px' }}
+            >
+              <div className="absolute top-1.5 right-1 w-2 h-2 bg-white rounded-full opacity-90" />
+              <div className="absolute bottom-1.5 left-1 w-1 h-1 bg-white/60 rounded-full" />
+            </motion.div>
             
             {/* Right Eye */}
-            <div className="w-[28px] h-[32px] bg-[#1a2b4c] rounded-[14px] shadow-sm relative overflow-hidden">
-               <div className="absolute top-1.5 right-1.5 w-3 h-3 bg-white rounded-full opacity-90" />
-               <div className="absolute bottom-2 left-1.5 w-1.5 h-1.5 bg-blue-200/80 rounded-full" />
-            </div>
+            <motion.div 
+              animate={{ 
+                height: isComfort ? 6 : (isAnalyzing ? 22 : 24),
+                scaleY: isComfort ? 0.6 : 1,
+                y: isComfort ? 5 : 0
+              }}
+              className="w-6 bg-[#1a2b4c] rounded-full shadow-sm relative overflow-hidden"
+              style={{ minHeight: '6px' }}
+            >
+               <div className="absolute top-1.5 right-1 w-2 h-2 bg-white rounded-full opacity-90" />
+               <div className="absolute bottom-1.5 left-1 w-1 h-1 bg-white/60 rounded-full" />
+            </motion.div>
           </div>
 
           {/* Mouth */}
-          <svg className="w-8 h-4 mt-5 relative z-20 text-[#1a2b4c]/70" viewBox="0 0 24 12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-            <path d="M6 4 Q12 10 18 4" />
-          </svg>
+          <motion.svg 
+            className="w-8 h-4 mt-5 relative z-20 text-[#1a2b4c]/70" 
+            viewBox="0 0 24 12" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2.5" 
+            strokeLinecap="round"
+            animate={{
+              scaleX: isFeedback ? 1.2 : (isListening ? 0.8 : 1),
+              scaleY: isFeedback ? 1.5 : (isListening ? 1.2 : 1),
+              y: isComfort ? 3 : 0
+            }}
+          >
+            <path d={isListening ? "M8 6 Q12 8 16 6" : (isFeedback ? "M4 2 Q12 12 20 2" : "M6 4 Q12 10 18 4")} />
+          </motion.svg>
         </div>
 
-        {/* Central Glowing Core (Orange Voiceprint Core) */}
+        {/* Central Glowing Core (Voiceprint / Emotion Core) */}
         <motion.div 
           animate={{
-            scale: [1, 1.05, 1],
-            boxShadow: `0 0 60px rgba(255, 180, 100, 0.8), inset 0 0 30px rgba(255,255,255,0.9)`
+            scale: isAnalyzing ? [1, 1.15, 1] : (isListening ? [1, 1.05, 1] : 1),
+            boxShadow: `0 0 50px ${coreGlow}, inset 0 0 20px rgba(255,255,255,0.8)`
           }}
-          transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+          transition={{ duration: isAnalyzing ? 1.2 : 2, repeat: Infinity, ease: 'easeInOut' }}
           className={cn(
-            "absolute bottom-[-10px] left-1/2 -translate-x-1/2 w-[110px] h-[110px] rounded-full flex items-center justify-center z-40",
-            "bg-gradient-to-br from-[#fff6e5] to-[#ffdcb3] border-2 border-white/80"
+            "absolute bottom-2 left-1/2 -translate-x-1/2 w-24 h-24 rounded-full flex items-center justify-center backdrop-blur-md z-30 transition-colors duration-1000",
+            `bg-gradient-to-br ${coreColor}`
           )}
         >
-          {/* Core Inner Ring */}
-          <div className="absolute inset-2 rounded-full border border-white/60 bg-white/30 backdrop-blur-sm flex items-center justify-center overflow-hidden">
-            {/* Embedded Soundwave */}
-            <svg width="40" height="20" viewBox="0 0 40 20" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-white">
-               <motion.path 
-                 animate={{
-                   d: [
-                     "M 0 10 Q 5 10 10 10 T 20 10 T 30 10 T 40 10",
-                     "M 0 10 Q 5 2 10 10 T 20 15 T 30 5 T 40 10",
-                     "M 0 10 Q 5 18 10 10 T 20 5 T 30 15 T 40 10",
-                     "M 0 10 Q 5 10 10 10 T 20 10 T 30 10 T 40 10"
-                   ]
-                 }}
-                 transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                 d="M 0 10 Q 5 10 10 10 T 20 10 T 30 10 T 40 10"
-                 stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-               />
-            </svg>
-          </div>
+          {/* Inner protective sphere */}
+          <div className="absolute inset-2 rounded-full border border-white/40 bg-white/20" />
+          
+          <SoundWave state={state} className="relative z-10" />
         </motion.div>
 
         {/* Cloud Arms (Holding the core) */}
-        <div className="absolute bottom-[10px] left-[100px] w-[50px] h-[50px] rounded-full bg-gradient-to-tr from-white to-[#e8f0fe] shadow-[2px_-2px_10px_rgba(0,0,0,0.05),inset_5px_5px_10px_rgba(255,255,255,1)] z-50" />
-        <div className="absolute bottom-[10px] right-[100px] w-[50px] h-[50px] rounded-full bg-gradient-to-tl from-white to-[#e8f0fe] shadow-[-2px_-2px_10px_rgba(0,0,0,0.05),inset_-5px_5px_10px_rgba(255,255,255,1)] z-50" />
-
+        <div className="absolute bottom-6 left-16 w-12 h-12 rounded-full bg-gradient-to-tr from-white/90 to-blue-50/60 shadow-sm z-40" />
+        <div className="absolute bottom-6 right-16 w-12 h-12 rounded-full bg-gradient-to-tl from-white/90 to-blue-50/60 shadow-sm z-40" />
       </motion.div>
+      
+      {/* Ground Ripple / Shadow */}
+      <motion.div 
+        animate={{
+           scale: isListening ? [1, 1.3, 1] : [1, 1.1, 1],
+           opacity: isAnalyzing ? [0.4, 0.2, 0.4] : [0.2, 0.1, 0.2]
+        }}
+        transition={{ duration: isListening ? 2 : 4, repeat: Infinity, ease: 'easeInOut' }}
+        className="absolute -bottom-4 w-[240px] h-[20px] rounded-[100%] bg-blue-300/40 blur-md pointer-events-none" 
+      />
+      {/* Secondary Ripple */}
+      <motion.div 
+        animate={{
+           scale: [1, 1.5, 1],
+           opacity: [0, 0.2, 0]
+        }}
+        transition={{ duration: 6, repeat: Infinity, ease: 'easeOut', delay: 1 }}
+        className="absolute -bottom-4 w-[280px] h-[24px] rounded-[100%] border border-blue-200/50 pointer-events-none" 
+      />
     </div>
   );
 }
