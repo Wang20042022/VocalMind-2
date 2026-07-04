@@ -106,9 +106,12 @@ export function HomeView({ state, onStart }: HomeViewProps) {
           <span className="ml-1 opacity-50 group-hover:translate-x-1 transition-transform">›</span>
         </button>
 
-        <button className="flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-orange-50/80 to-amber-50/80 hover:from-orange-100 hover:to-amber-100 backdrop-blur-xl border border-orange-100 text-[#a06030] shadow-[0_8px_20px_rgba(255,150,100,0.06)] transition-all hover:-translate-y-0.5 group">
+        <button 
+          onClick={() => onStart('history')}
+          className="flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-orange-50/80 to-amber-50/80 hover:from-orange-100 hover:to-amber-100 backdrop-blur-xl border border-orange-100 text-[#a06030] shadow-[0_8px_20px_rgba(255,150,100,0.06)] transition-all hover:-translate-y-0.5 group"
+        >
           <FileText className="w-5 h-5 text-orange-400" />
-          <span className="font-medium text-[17px]">查看上次情绪记录</span>
+          <span className="font-medium text-[17px]">查看历史记录</span>
           <span className="ml-1 opacity-50 group-hover:translate-x-1 transition-transform">›</span>
         </button>
       </div>

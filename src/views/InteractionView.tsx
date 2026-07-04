@@ -3,15 +3,19 @@ import { Camera, Mic, PhoneOff, ScanFace, Activity, Hexagon, Cloud, Smile } from
 import { AppMode, InteractionState, EmotionState } from '../types';
 import { Avatar } from '../components/Avatar';
 import { GlassCard } from '../components/GlassCard';
+import { useCompanionBackend } from '../hooks/useCompanionBackend';
 
 interface InteractionViewProps {
   mode: AppMode;
   state: InteractionState;
   emotion: EmotionState;
   onEnd: () => void;
+  onStateChange: (state: InteractionState, emotion: EmotionState) => void;
 }
 
-export function InteractionView({ mode, state, emotion, onEnd }: InteractionViewProps) {
+export function InteractionView({ mode, state, emotion, onEnd, onStateChange }: InteractionViewProps) {
+  const { setVideoRef } = useCompanionBackend(true, mode === 'video' ? 'video' : 'audio', (em, st) => onStateChange(st, em));
+
   
   const getTitles = () => {
     switch(state) {
@@ -241,9 +245,9 @@ export function InteractionView({ mode, state, emotion, onEnd }: InteractionView
             initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
             className="absolute bottom-6 right-10 w-[220px] h-[300px] bg-slate-900 rounded-[24px] overflow-hidden shadow-[0_20px_40px_rgba(0,0,0,0.2)] border-2 border-white/10 z-40 hidden md:block group"
           >
-             {/* Simulated video feed */}
+             {/* Actual video feed */}
              <div className="w-full h-full relative bg-slate-800 flex items-center justify-center">
-                <Camera className="w-8 h-8 text-slate-600" />
+                <video ref={setVideoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
                 
                 {/* Overlay indicating analysis is active on camera */}
                 <AnimatePresence>

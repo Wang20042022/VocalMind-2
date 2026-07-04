@@ -1,8 +1,10 @@
-import { HTMLAttributes } from 'react';
+import React, { ComponentProps } from 'react';
 import { cn } from '../lib/utils';
 
-interface GlassCardProps extends HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode;
+interface GlassCardProps {
+  children?: React.ReactNode;
+  className?: string;
+  onClick?: () => void;
 }
 
 export function GlassCard({ children, className, ...props }: GlassCardProps) {

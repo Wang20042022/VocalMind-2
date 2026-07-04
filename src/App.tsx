@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
-import { AppMode, InteractionState, EmotionState } from './types';
+import { AppMode, InteractionState, EmotionState, HistoryRecord } from './types';
 import { TopNav } from './components/TopNav';
 import { HomeView } from './views/HomeView';
 import { InteractionView } from './views/InteractionView';
+import { HistoryView } from './views/HistoryView';
+import { ReportView } from './views/ReportView';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
+import { mockHistory } from './data/mockData';
 
 function BackgroundDecorations({ state, emotion }: { state: InteractionState, emotion: EmotionState }) {
   const isComfort = state === 'comfort' || (state === 'feedback' && (emotion === 'anxious' || emotion === 'tired'));
@@ -75,39 +78,10 @@ export default function App() {
   const [appMode, setAppMode] = useState<AppMode>('home');
   const [interactionState, setInteractionState] = useState<InteractionState>('idle');
   const [emotion, setEmotion] = useState<EmotionState>(null);
+  const [historyData, setHistoryData] = useState<HistoryRecord[]>(mockHistory);
+  const [currentRecord, setCurrentRecord] = useState<HistoryRecord | null>(null);
 
-  // Simulation logic for demonstrating the flow automatically
-  useEffect(() => {
-    let timers: number[] = [];
-
-    if (appMode !== 'home') {
-      // Flow: idle (2s) -> listening (4s) -> analyzing (4s) -> feedback (3s) -> comfort (or stay feedback)
-      timers.push(window.setTimeout(() => setInteractionState('listening'), 2000));
-      timers.push(window.setTimeout(() => setInteractionState('analyzing'), 7000));
-      timers.push(window.setTimeout(() => {
-        setInteractionState('feedback');
-        setEmotion('calm'); // Simulate detection result
-      }, 12000));
-      
-      // Let's simulate a tired/anxious state transition after some time to show the comfort mode
-      timers.push(window.setTimeout(() => {
-        setInteractionState('analyzing');
-      }, 18000));
-      
-      timers.push(window.setTimeout(() => {
-        setInteractionState('feedback');
-        setEmotion('anxious');
-      }, 21000));
-
-      timers.push(window.setTimeout(() => {
-        setInteractionState('comfort');
-      }, 23000));
-    }
-
-    return () => {
-      timers.forEach(clearTimeout);
-    };
-  }, [appMode]);
+  // Simulation logic removed in favor of real backend
 
   const handleStart = (mode: AppMode) => {
     setAppMode(mode);
@@ -115,21 +89,99 @@ export default function App() {
     setEmotion(null);
   };
 
-  const handleEnd = () => {
+  const handleStateChange = (state: InteractionState, em: EmotionState) => {
+    setInteractionState(state);
+    if (em !== undefined && em !== null) {
+      setEmotion(em);
+    }
+  };
+
+  const handleHome = () => {
     setAppMode('home');
     setInteractionState('idle');
     setEmotion(null);
+    setCurrentRecord(null);
+  };
+
+  const handleInteractionEnd = () => {
+    // When interaction ends, generate a mock report based on current session and navigate to report view
+    const newRecord: HistoryRecord = {
+      session: {
+        session_id: `s_${Date.now()}`,
+        user_id: 'u_123',
+        mode: appMode === 'video' ? 'video' : 'voice',
+        start_time: new Date(Date.now() - 150000).toISOString(),
+        end_time: new Date().toISOString(),
+        duration_seconds: 150,
+        status: 'completed',
+        created_at: new Date().toISOString()
+      },
+      result: {
+        predicted_emotion: emotion || 'calm',
+        emotion_score: 0.85,
+        confidence: 'high',
+        emotion_keywords: ['放松', '专注']
+      },
+      report: {
+        report_id: `r_${Date.now()}`,
+        session_id: `s_${Date.now()}`,
+        main_emotion: emotion || 'calm',
+        emotion_trend: 'stable',
+        emotion_keywords: ['放松', '专注'],
+        audio_summary: ['语速适中', '音量平稳'],
+        face_summary: appMode === 'video' ? ['面部表情自然'] : [],
+        overall_summary: '本次交流整体平稳，情绪状态良好。此结果基于本次对话生成的总结，仅供参考。'
+      }
+    };
+    
+    // Add to top of history
+    setHistoryData([newRecord, ...historyData]);
+    setCurrentRecord(newRecord);
+    
+    setAppMode('report');
+    setInteractionState('idle');
+    setEmotion(null);
+  };
+
+  const handleSelectRecord = (record: HistoryRecord) => {
+    setCurrentRecord(record);
+    setAppMode('report');
+  };
+
+  const handleFeedbackSubmit = (sessionId: string, finalEmotion: EmotionState, supplementText?: string) => {
+    setHistoryData(prevData => prevData.map(record => {
+      if (record.session.session_id === sessionId) {
+        const updatedRecord = {
+          ...record,
+          feedback: {
+            feedback_id: `f_${Date.now()}`,
+            session_id: sessionId,
+            predicted_emotion: record.result.predicted_emotion,
+            user_confirmed_emotion: finalEmotion,
+            feedback_type: (finalEmotion === record.result.predicted_emotion && !supplementText) ? 'accurate' : 'supplement' as const,
+            supplement_text: supplementText,
+            final_emotion: finalEmotion,
+            submitted_at: new Date().toISOString()
+          }
+        };
+        if (currentRecord?.session.session_id === sessionId) {
+          setCurrentRecord(updatedRecord);
+        }
+        return updatedRecord;
+      }
+      return record;
+    }));
   };
 
   return (
     <div className="min-h-screen text-slate-800 font-sans overflow-hidden relative">
       <BackgroundDecorations state={interactionState} emotion={emotion} />
 
-      <TopNav mode={appMode} state={interactionState} onHome={handleEnd} />
+      <TopNav mode={appMode} state={interactionState} onHome={handleHome} />
 
       <main className="relative z-10 w-full h-screen flex flex-col items-center justify-center pt-20">
         <AnimatePresence mode="wait">
-          {appMode === 'home' ? (
+          {appMode === 'home' && (
             <motion.div 
               key="home"
               initial={{ opacity: 0, y: 20 }}
@@ -139,7 +191,9 @@ export default function App() {
             >
               <HomeView state={interactionState} onStart={handleStart} />
             </motion.div>
-          ) : (
+          )}
+
+          {(appMode === 'video' || appMode === 'audio') && (
             <motion.div 
               key="interaction"
               initial={{ opacity: 0, scale: 0.95 }}
@@ -151,7 +205,39 @@ export default function App() {
                 mode={appMode} 
                 state={interactionState} 
                 emotion={emotion} 
-                onEnd={handleEnd} 
+                onEnd={handleInteractionEnd}
+                onStateChange={handleStateChange}
+              />
+            </motion.div>
+          )}
+
+          {appMode === 'history' && (
+            <motion.div 
+              key="history"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="w-full h-full"
+            >
+              <HistoryView 
+                onBack={handleHome} 
+                onSelectRecord={handleSelectRecord} 
+              />
+            </motion.div>
+          )}
+
+          {appMode === 'report' && currentRecord && (
+            <motion.div 
+              key="report"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="w-full h-full"
+            >
+              <ReportView 
+                record={currentRecord} 
+                onBack={() => setAppMode('history')} 
+                onFeedbackSubmit={handleFeedbackSubmit}
               />
             </motion.div>
           )}
