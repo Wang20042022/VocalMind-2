@@ -1,0 +1,11 @@
+{
+  "name": "VocalMind",
+  "description": "A companion-like emotional interaction interface that recognizes emotions through video and audio, featuring a dynamic central virtual avatar.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
